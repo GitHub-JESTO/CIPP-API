@@ -13,6 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Input bindings are passed in via param block.
 $Tenants = $request.body.selectedTenants.defaultDomainName
 Write-Host ($Request.body | ConvertTo-Json)
+if ($Tenants -eq "AllTenants") { $Tenants = (Get-Tenants).defaultDomainName }
 $results = foreach ($Tenant in $tenants) {
     try {
         $ObjBody = if ($Request.body.Type -eq "IPLocation") {
@@ -21,7 +22,7 @@ $results = foreach ($Tenant in $tenants) {
             [pscustomobject]@{
                 "@odata.type" = "#microsoft.graph.ipNamedLocation"
                 displayName   = $request.body.policyName
-                ipRanges      = $IPRanges
+                ipRanges      = @($IPRanges)
                 isTrusted     = $Request.body.Trusted
             }
         }
@@ -35,7 +36,7 @@ $results = foreach ($Tenant in $tenants) {
         }
         $Body = ConvertTo-Json -InputObject $ObjBody
         $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -body $body -Type POST -tenantid $tenant
-        "Succesfully added Named Location for $($Tenant)"
+        "Successfully added Named Location for $($Tenant)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message " added Named Location $($Displayname)" -Sev "Info"
 
     }
